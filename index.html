@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>全家 Fami!ce 霜淇淋圖鑑</title>
+
+  <!-- PWA 設定 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0093d8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fami!ce圖鑑">
+  
+  <!-- CDN 資源 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-12 select-none">
+
+  <!-- 頂部導覽列 -->
+  <header class="sticky top-0 z-30 bg-sky-600 text-white shadow-md backdrop-blur-md bg-opacity-90">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-ice-cream text-2xl text-amber-300"></i>
+        <h1 class="text-xl font-bold tracking-wide">Fami!ce 收集圖鑑</h1>
+      </div>
+      <div class="flex space-x-2">
+        <button onclick="exportData()" class="px-3 py-1 bg-sky-700 hover:bg-sky-800 rounded-lg text-xs font-medium transition flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> 匯出
+        </button>
+        <label class="px-3 py-1 bg-sky-700 hover:bg-sky-800 rounded-lg text-xs font-medium transition cursor-pointer flex items-center gap-1">
+          <i class="fa-solid fa-upload"></i> 匯入
+          <input type="file" onchange="importData(event)" class="hidden" accept=".json">
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- 儀表板 -->
+  <main class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
+    <section class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="p-3 bg-sky-50 rounded-xl">
+        <p class="text-xs text-sky-600 font-semibold">總收集進度</p>
+        <p id="stat-progress" class="text-2xl font-black text-sky-900 mt-1">0 / 0</p>
+        <div class="w-full bg-sky-200 h-2 rounded-full mt-2 overflow-hidden">
+          <div id="stat-bar" class="bg-sky-500 h-full w-0 transition-all duration-300"></div>
+        </div>
+      </div>
+      <div class="p-3 bg-amber-50 rounded-xl">
+        <p class="text-xs text-amber-600 font-semibold">解鎖成就率</p>
+        <p id="stat-percent" class="text-2xl font-black text-amber-900 mt-1">0%</p>
+      </div>
+      <div class="p-3 bg-emerald-50 rounded-xl">
+        <p class="text-xs text-emerald-600 font-semibold">平均個人評分</p>
+        <p id="stat-avg-rating" class="text-2xl font-black text-emerald-900 mt-1">0.0 ★</p>
+      </div>
+      <div class="p-3 bg-purple-50 rounded-xl">
+        <p class="text-xs text-purple-600 font-semibold">獲得稱號</p>
+        <p id="stat-badge" class="text-sm font-bold text-purple-900 mt-2 truncate">新手霜淇淋迷</p>
+      </div>
+    </section>
+
+    <!-- 工具列：控制項與新增功能 -->
+    <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+      <div class="flex flex-col md:flex-row gap-3 justify-between">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+          <input type="text" id="search-input" placeholder="搜尋口味名稱..." oninput="renderGrid()" class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+        <div class="flex gap-2">
+          <select id="filter-status" onchange="renderGrid()" class="border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <option value="all">全部狀態</option>
+            <option value="collected">已吃過</option>
+            <option value="uncollected">未吃過</option>
+          </select>
+          <select id="sort-by" onchange="renderGrid()" class="border border-slate-200 rounded-xl text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <option value="default">預設排序</option>
+            <option value="rating-desc">評分：高至低</option>
+            <option value="rating-asc">評分：低至高</option>
+          </select>
+          <button onclick="toggleModal(true)" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-1 shrink-0">
+            <i class="fa-solid fa-plus"></i> 新增口味
+          </button>
+        </div>
+      </div>
+
+      <!-- 分類標籤 -->
+      <div id="category-tags" class="flex gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <!-- 動態渲染類別按鈕 -->
+      </div>
+    </section>
+
+    <!-- 卡片展示網格 -->
+    <section id="flavor-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <!-- 動態渲染卡片 -->
+    </section>
+  </main>
+
+  <!-- 新增/編輯口味 Modal -->
+  <div id="modal-add" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="text-lg font-bold text-slate-800">新增自訂口味</h3>
+        <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <form id="add-form" onsubmit="handleAddFlavor(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">口味名稱</label>
+          <input type="text" id="new-name" required class="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">分類系列</label>
+          <select id="new-category" class="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+            <option value="經典口味">經典口味</option>
+            <option value="茶系列">茶系列</option>
+            <option value="水果系列">水果系列</option>
+            <option value="其他系列">其他系列</option>
+            <option value="體驗店限定">體驗店限定</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">描述 / 備註</label>
+          <input type="text" id="new-desc" placeholder="選填" class="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">圖片網址 (選填，留空將自動生成圖片)</label>
+          <input type="url" id="new-img" placeholder="https://..." class="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="toggleModal(false)" class="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600">取消</button>
+          <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-xl text-xs font-semibold hover:bg-sky-700">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 預設原始口味資料庫
+    const INITIAL_FLAVORS = [
+      // 經典
+      { id: '1', name: '莊園牛奶', category: '經典口味', desc: '嚴選台灣在地小農牛奶' },
+      { id: '2', name: '比利時巧克力', category: '經典口味', desc: '榮獲 MONDE SELECTION 金獎' },
+      // 茶系列
+      { id: '3', name: '抹茶', category: '茶系列' }, { id: '4', name: '辻利抹茶', category: '茶系列' },
+      { id: '5', name: '英式奶茶', category: '茶系列' }, { id: '6', name: '靜岡抹茶', category: '茶系列' },
+      { id: '7', name: '雀巢檸檬茶', category: '茶系列' }, { id: '8', name: '鐵觀音', category: '茶系列' },
+      { id: '9', name: '仙女紅茶', category: '茶系列' }, { id: '10', name: '泰泰厚奶', category: '茶系列' },
+      { id: '11', name: '日安紅濃茶歐蕾', category: '茶系列' }, { id: '12', name: '棉被午茉綠', category: '茶系列' },
+      { id: '13', name: '東方美人茶', category: '茶系列' }, { id: '14', name: '春日抹茶', category: '茶系列' },
+      { id: '15', name: '焙茶麥麥', category: '茶系列' }, { id: '16', name: '棉被四季金萱', category: '茶系列' },
+      { id: '17', name: '四季金萱', category: '茶系列' }, { id: '18', name: '荔枝烏龍', category: '茶系列' },
+      { id: '19', name: '炭焙烏龍', category: '茶系列' }, { id: '20', name: '哈尼午茉綠', category: '茶系列' },
+      { id: '21', name: '日式煎茶', category: '茶系列' }, { id: '22', name: '醇厚焙茶', category: '茶系列' },
+      { id: '23', name: '伊藤園抹茶', category: '茶系列' }, { id: '24', name: '泰式奶茶', category: '茶系列' },
+      { id: '25', name: '仙女奶茶', category: '茶系列' },
+      // 水果系列
+      { id: '26', name: '水蜜桃', category: '水果系列' }, { id: '27', name: '芒果', category: '水果系列' },
+      { id: '28', name: '草莓', category: '水果系列' }, { id: '29', name: '北海道哈密瓜', category: '水果系列' },
+      { id: '30', name: '綜合莓果', category: '水果系列' }, { id: '31', name: '青森王林', category: '水果系列' },
+      { id: '32', name: '熱帶水果', category: '水果系列' }, { id: '33', name: '香蕉', category: '水果系列' },
+      { id: '34', name: '熊本不知火橘', category: '水果系列' }, { id: '35', name: '青森蘋果', category: '水果系列' },
+      { id: '36', name: '山形西洋梨', category: '水果系列' }, { id: '37', name: '日日蜜柑', category: '水果系列' },
+      { id: '38', name: '焰火西瓜', category: '水果系列' }, { id: '39', name: '重乳草莓', category: '水果系列' },
+      { id: '40', name: '好釋成霜', category: '水果系列' }, { id: '41', name: '貘貘桃', category: '水果系列' },
+      { id: '42', name: '芒果椰奶', category: '水果系列' }, { id: '43', name: '白葡萄', category: '水果系列' },
+      { id: '44', name: '草莓優格', category: '水果系列' }, { id: '45', name: '巨峰葡萄', category: '水果系列' },
+      { id: '46', name: '山丘藍台灣藍莓', category: '水果系列' }, { id: '47', name: '海鹽檸檬', category: '水果系列' },
+      { id: '48', name: '是芭樂系', category: '水果系列' }, { id: '49', name: '木瓜牛奶', category: '水果系列' },
+      { id: '50', name: '草莓牛奶', category: '水果系列' }, { id: '51', name: '山丘藍台灣藍莓PLUS+', category: '水果系列' },
+      { id: '52', name: '蜂蜜柚橘', category: '水果系列' }, { id: '53', name: '奇異果', category: '水果系列' },
+      { id: '54', name: '蘭姆葡萄', category: '水果系列' }, { id: '55', name: '梨山水蜜桃', category: '水果系列' },
+      // 其他系列
+      { id: '56', name: '紅豆', category: '其他系列' }, { id: '57', name: '森永牛奶糖', category: '其他系列' },
+      { id: '58', name: '巧克力', category: '其他系列' }, { id: '59', name: '經典原味', category: '其他系列' },
+      { id: '60', name: '典藏比利時巧克力', category: '其他系列' }, { id: '61', name: '法式香草', category: '其他系列' },
+      { id: '62', name: '花生', category: '其他系列' }, { id: '63', name: '脆片焦糖布丁', category: '其他系列' },
+      { id: '64', name: '蜂蜜檸檬', category: '其他系列' }, { id: '65', name: '黑色幽墨', category: '其他系列' },
+      { id: '66', name: '櫻花', category: '其他系列' }, { id: '67', name: '夯番薯', category: '其他系列' },
+      { id: '68', name: '金色三麥', category: '其他系列' }, { id: '69', name: '蜂蜜', category: '其他系列' },
+      { id: '70', name: '果汁牛乳', category: '其他系列' }, { id: '71', name: '彈珠汽水', category: '其他系列' },
+      { id: '72', name: '桂花小麥啤酒', category: '其他系列' }, { id: '73', name: '經典拿鐵', category: '其他系列' },
+      { id: '74', name: '77乳加', category: '其他系列' }, { id: '75', name: 'MONBANA巧克力', category: '其他系列' },
+      { id: '76', name: '萬丹紅豆', category: '其他系列' }, { id: '77', name: '澎湖仙人掌', category: '其他系列' },
+      { id: '78', name: '厚豆乳', category: '其他系列' }, { id: '79', name: '杏仁豆腐聖代', category: '其他系列' },
+      { id: '80', name: '提拉米蘇', category: '其他系列' }, { id: '81', name: '起司塔', category: '其他系列' },
+      { id: '82', name: '糖炒栗子', category: '其他系列' }, { id: '83', name: '橙香巧克力', category: '其他系列' },
+      { id: '84', name: '蜜蜜開心果', category: '其他系列' }, { id: '85', name: '海鹽牛奶', category: '其他系列' },
+      { id: '86', name: '慢煮焦糖', category: '其他系列' }, { id: '87', name: '玫瑰起司', category: '其他系列' },
+      { id: '88', name: '玉米濃湯', category: '其他系列' }, { id: '89', name: '嗨嗨蘇打', category: '其他系列' },
+      { id: '90', name: '椰椰奶奶', category: '其他系列' }, { id: '91', name: '金ㄟ紫薯', category: '其他系列' },
+      { id: '92', name: '咖啡起司歐蕾', category: '其他系列' }, { id: '93', name: '濃黑巧克力', category: '其他系列' },
+      { id: '94', name: '青花椒牛奶', category: '其他系列' }, { id: '95', name: '青花椒巧克力', category: '其他系列' },
+      { id: '96', name: '灰潮香草', category: '其他系列' }, { id: '97', name: '香芋牛奶', category: '其他系列' },
+      { id: '98', name: '經典117咖啡', category: '其他系列' }, { id: '99', name: '煉乳牛奶', category: '其他系列' },
+      { id: '100', name: '紅豆牛奶', category: '其他系列' }, { id: '101', name: '仙仙仙草', category: '其他系列' },
+      { id: '102', name: '滑爆可樂', category: '其他系列' }, { id: '103', name: '炭燒咖啡', category: '其他系列' },
+      { id: '104', name: '香香菜菜', category: '其他系列' },
+      // 體驗店限定
+      { id: '105', name: '起司蛋糕', category: '體驗店限定' }, { id: '106', name: '開心果', category: '體驗店限定' },
+      { id: '107', name: '贅沢巧克力', category: '體驗店限定' }, { id: '108', name: '焦糖蘇打', category: '體驗店限定' }
+    ];
+
+    let flavors = JSON.parse(localStorage.getItem('famice_flavors')) || INITIAL_FLAVORS;
+    let userRecords = JSON.parse(localStorage.getItem('famice_records')) || {}; 
+    let activeCategory = '全部';
+
+    // 色彩邏輯產生 SVG
+    function generateSVG(name) {
+      let bg = '#38bdf8', main = '#fef08a';
+      if (name.includes('抹茶') || name.includes('茶')) { bg = '#86efac'; main = '#15803d'; }
+      else if (name.includes('巧克力') || name.includes('可可') || name.includes('咖啡')) { bg = '#d97706'; main = '#451a03'; }
+      else if (name.includes('草莓') || name.includes('櫻花') || name.includes('桃')) { bg = '#f472b6'; main = '#fda4af'; }
+      else if (name.includes('芒果') || name.includes('蜜柑') || name.includes('橘')) { bg = '#fbbf24'; main = '#f59e0b'; }
+      else if (name.includes('葡萄') || name.includes('藍莓') || name.includes('紫')) { bg = '#c084fc'; main = '#7e22ce'; }
+
+      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(bg)}" opacity="0.2"/><path d="M35 60 L65 60 L50 90 Z" fill="%23fde047" stroke="%23ca8a04" stroke-width="2"/><path d="M35 60 Q35 45 50 45 Q65 45 65 60 Z" fill="${encodeURIComponent(main)}"/><path d="M38 48 Q38 35 50 35 Q62 35 62 48 Z" fill="%23ffffff" opacity="0.8"/><path d="M42 37 Q42 25 50 25 Q58 25 58 37 Z" fill="${encodeURIComponent(main)}"/></svg>`;
+    }
+
+    // 更新儀表板
+    function updateStats() {
+      const total = flavors.length;
+      const collectedCount = Object.values(userRecords).filter(r => r.collected).length;
+      const percent = total ? Math.round((collectedCount / total) * 100) : 0;
+      
+      const ratings = Object.values(userRecords).map(r => r.rating).filter(r => r > 0);
+      const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '0.0';
+
+      document.getElementById('stat-progress').innerText = `${collectedCount} / ${total}`;
+      document.getElementById('stat-percent').innerText = `${percent}%`;
+      document.getElementById('stat-bar').style.width = `${percent}%`;
+      document.getElementById('stat-avg-rating').innerText = `${avgRating} ★`;
+
+      let badge = '新手霜淇淋迷';
+      if (collectedCount >= 50) badge = '霜淇淋狂熱者 🍦';
+      else if (collectedCount >= 20) badge = '全家美食家 🌟';
+      else if (collectedCount >= 5) badge = '巷口探險家 🚶';
+      document.getElementById('stat-badge').innerText = badge;
+    }
+
+    // 渲染分類按鈕
+    function renderCategories() {
+      const categories = ['全部', '經典口味', '茶系列', '水果系列', '其他系列', '體驗店限定'];
+      const container = document.getElementById('category-tags');
+      container.innerHTML = categories.map(cat => `
+        <button onclick="setCategory('${cat}')" class="px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition ${activeCategory === cat ? 'bg-sky-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+          ${cat}
+        </button>
+      `).join('');
+    }
+
+    function setCategory(cat) {
+      activeCategory = cat;
+      renderCategories();
+      renderGrid();
+    }
+
+    // 渲染主卡片區
+    function renderGrid() {
+      const search = document.getElementById('search-input').value.trim().toLowerCase();
+      const status = document.getElementById('filter-status').value;
+      const sort = document.getElementById('sort-by').value;
+
+      let list = flavors.filter(f => {
+        const matchesCat = activeCategory === '全部' || f.category === activeCategory;
+        const matchesSearch = f.name.toLowerCase().includes(search);
+        const record = userRecords[f.id] || {};
+        const matchesStatus = status === 'all' || (status === 'collected' && record.collected) || (status === 'uncollected' && !record.collected);
+        return matchesCat && matchesSearch && matchesStatus;
+      });
+
+      if (sort === 'rating-desc') {
+        list.sort((a, b) => ((userRecords[b.id]?.rating || 0) - (userRecords[a.id]?.rating || 0)));
+      } else if (sort === 'rating-asc') {
+        list.sort((a, b) => ((userRecords[a.id]?.rating || 0) - (userRecords[b.id]?.rating || 0)));
+      }
+
+      const grid = document.getElementById('flavor-grid');
+      grid.innerHTML = list.map(f => {
+        const record = userRecords[f.id] || { collected: false, rating: 0 };
+        const imgSrc = f.img || generateSVG(f.name);
+
+        return `
+          <div class="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm flex flex-col justify-between relative overflow-hidden group">
+            ${f.isCustom ? `<button onclick="deleteCustomFlavor('${f.id}')" class="absolute top-2 right-2 text-rose-400 hover:text-rose-600 z-10"><i class="fa-solid fa-trash-can text-xs"></i></button>` : ''}
+            <div>
+              <div class="aspect-square rounded-xl bg-slate-50 overflow-hidden mb-2 relative flex items-center justify-center">
+                <img src="${imgSrc}" alt="${f.name}" class="w-full h-full object-cover transition duration-300 group-hover:scale-105">
+                ${record.collected ? '<span class="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">已解鎖</span>' : ''}
+              </div>
+              <span class="text-[10px] font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md inline-block mb-1">${f.category}</span>
+              <h4 class="font-bold text-sm text-slate-800 line-clamp-1">${f.name}</h4>
+              <p class="text-[11px] text-slate-400 line-clamp-1 mb-2">${f.desc || '經典美味霜淇淋'}</p>
+            </div>
+
+            <div class="space-y-2 border-t pt-2 border-slate-50">
+              <!-- 星星評分 (1-10分) -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-0.5 text-xs text-amber-400">
+                  <button onclick="setRating('${f.id}', ${record.rating === 10 ? 0 : 10})" class="hover:scale-110">★</button>
+                  <span class="text-xs font-bold text-slate-600 ml-1">${record.rating || 0}分</span>
+                </div>
+                ${record.rating > 0 ? `<button onclick="setRating('${f.id}', 0)" class="text-[10px] text-slate-400 hover:text-rose-500">取消評分</button>` : ''}
+              </div>
+
+              <!-- 打卡開關按鈕 -->
+              <button onclick="toggleCollect('${f.id}')" class="w-full py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 ${record.collected ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-sky-600 text-white hover:bg-sky-700'}">
+                <i class="fa-solid ${record.collected ? 'fa-xmark' : 'fa-check'}"></i>
+                ${record.collected ? '取消打卡' : '打卡解鎖'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateStats();
+    }
+
+    // 互動控制邏輯
+    function toggleCollect(id) {
+      if (!userRecords[id]) userRecords[id] = { collected: false, rating: 0 };
+      userRecords[id].collected = !userRecords[id].collected;
+      saveData();
+      renderGrid();
+    }
+
+    function setRating(id, rating) {
+      if (!userRecords[id]) userRecords[id] = { collected: true, rating: 0 };
+      userRecords[id].rating = rating;
+      if (rating > 0) userRecords[id].collected = true;
+      saveData();
+      renderGrid();
+    }
+
+    function handleAddFlavor(e) {
+      e.preventDefault();
+      const newFlavor = {
+        id: 'custom_' + Date.now(),
+        name: document.getElementById('new-name').value.trim(),
+        category: document.getElementById('new-category').value,
+        desc: document.getElementById('new-desc').value.trim(),
+        img: document.getElementById('new-img').value.trim() || null,
+        isCustom: true
+      };
+      flavors.unshift(newFlavor);
+      saveData();
+      toggleModal(false);
+      renderGrid();
+      document.getElementById('add-form').reset();
+    }
+
+    function deleteCustomFlavor(id) {
+      if (confirm('確定要刪除此自訂口味嗎？')) {
+        flavors = flavors.filter(f => f.id !== id);
+        delete userRecords[id];
+        saveData();
+        renderGrid();
+      }
+    }
+
+    function toggleModal(show) {
+      document.getElementById('modal-add').classList.toggle('hidden', !show);
+    }
+
+    // 本地資料持久化與匯出匯入
+    function saveData() {
+      localStorage.setItem('famice_flavors', JSON.stringify(flavors));
+      localStorage.setItem('famice_records', JSON.stringify(userRecords));
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ flavors, userRecords }));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `famice_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (imported.flavors && imported.userRecords) {
+            flavors = imported.flavors;
+            userRecords = imported.userRecords;
+            saveData();
+            renderGrid();
+            alert('成功匯入備份資料！');
+          }
+        } catch (err) {
+          alert('匯入失敗，請確認 JSON 檔案格式是否正確。');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 初始化 App
+    renderCategories();
+    renderGrid();
+  </script>
+
+  <!-- PWA Service Worker 註冊 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('PWA Service Worker 已成功運作', reg.scope))
+          .catch(err => console.error('PWA 註冊失敗:', err));
+      });
+    }
+  </script>
+</body>
+</html>
