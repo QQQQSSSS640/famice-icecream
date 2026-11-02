@@ -205,7 +205,7 @@
     let userRecords = JSON.parse(localStorage.getItem('famice_records')) || {}; 
     let activeCategory = '全部';
 
-    // 色彩邏輯產生 SVG
+    // 色彩邏輯產生 SVG (Base64 編碼，防止字串解析錯誤)
     function generateSVG(name) {
       let bg = '#38bdf8', main = '#fef08a';
       if (name.includes('抹茶') || name.includes('茶')) { bg = '#86efac'; main = '#15803d'; }
@@ -214,7 +214,8 @@
       else if (name.includes('芒果') || name.includes('蜜柑') || name.includes('橘')) { bg = '#fbbf24'; main = '#f59e0b'; }
       else if (name.includes('葡萄') || name.includes('藍莓') || name.includes('紫')) { bg = '#c084fc'; main = '#7e22ce'; }
 
-      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(bg)}" opacity="0.2"/><path d="M35 60 L65 60 L50 90 Z" fill="%23fde047" stroke="%23ca8a04" stroke-width="2"/><path d="M35 60 Q35 45 50 45 Q65 45 65 60 Z" fill="${encodeURIComponent(main)}"/><path d="M38 48 Q38 35 50 35 Q62 35 62 48 Z" fill="%23ffffff" opacity="0.8"/><path d="M42 37 Q42 25 50 25 Q58 25 58 37 Z" fill="${encodeURIComponent(main)}"/></svg>`;
+      const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}" opacity="0.2"/><path d="M35 60 L65 60 L50 90 Z" fill="#fde047" stroke="#ca8a04" stroke-width="2"/><path d="M35 60 Q35 45 50 45 Q65 45 65 60 Z" fill="${main}"/><path d="M38 48 Q38 35 50 35 Q62 35 62 48 Z" fill="#ffffff" opacity="0.8"/><path d="M42 37 Q42 25 50 25 Q58 25 58 37 Z" fill="${main}"/></svg>`;
+      return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(rawSvg)))}`;
     }
 
     // 更新儀表板
@@ -296,11 +297,12 @@
             <div class="space-y-2 border-t pt-2 border-slate-50">
               <!-- 星星評分 (1-10分) -->
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-0.5 text-xs text-amber-400">
-                  <button onclick="setRating('${f.id}', ${record.rating === 10 ? 0 : 10})" class="hover:scale-110">★</button>
-                  <span class="text-xs font-bold text-slate-600 ml-1">${record.rating || 0}分</span>
+                <div class="flex items-center gap-0.5 text-[11px] text-amber-400">
+                  ${[1,2,3,4,5,6,7,8,9,10].map(star => `
+                    <button onclick="setRating('${f.id}', ${record.rating === star ? 0 : star})" class="${star <= record.rating ? 'text-amber-400 font-bold' : 'text-slate-200'} hover:scale-125 transition">★</button>
+                  `).join('')}
                 </div>
-                ${record.rating > 0 ? `<button onclick="setRating('${f.id}', 0)" class="text-[10px] text-slate-400 hover:text-rose-500">取消評分</button>` : ''}
+                <span class="text-xs font-bold text-slate-600">${record.rating || 0}分</span>
               </div>
 
               <!-- 打卡開關按鈕 -->
